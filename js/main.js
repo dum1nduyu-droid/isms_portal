@@ -3,9 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const loadingScreen = document.getElementById('loading-screen');
     const appContainer = document.getElementById('app-container');
     const navLinks = document.getElementById('nav-links');
+    const sidebar = document.querySelector('.sidebar');
+    const burgerMenu = document.getElementById('burger-menu');
+
+    burgerMenu.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+    });
 
     const routes = {
-        '#dashboard': 'pages/dashboard.html',
         '#dashboard_admin': 'pages/dashboard_admin.html',
         '#dashboard_isms_manager': 'pages/dashboard_isms_manager.html',
         '#dashboard_auditor': 'pages/dashboard_auditor.html',
@@ -15,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
         '#forgot-password': 'pages/forgot_password.html',
         '#reset-password': 'pages/reset_password.html',
         '#access-denied': 'pages/access_denied.html',
+        '#activity-logs': 'pages/activity_logs.html',
+        '#ai-chat': 'pages/ai_chat.html',
     };
 
     async function loadContent(url, route) {
@@ -31,73 +38,114 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function handleRouting() {
-        const hash = window.location.hash || '#dashboard';
-        const route = hash.split('?')[0];
-        const page = route.substring(1); // remove #
+        try {
+            const hash = window.location.hash || '#login';
+            const route = hash.split('?')[0];
+            const page = route.substring(1); // remove #
 
-        const accessResponse = await fetch(`php/api/check_access.php?page=${page}`);
-        if (!accessResponse.ok) {
-            window.location.hash = '#access-denied';
-            return;
-        }
+            const accessResponse = await fetch(`php/api/check_access.php?page=${page}`);
+            if (!accessResponse.ok) {
+                window.location.hash = '#access-denied';
+                return;
+            }
 
-        const url = routes[route];
-        if (url) {
-            loadContent(url, route);
-        } else {
-            mainContent.innerHTML = '<p>Page not found</p>';
+            const url = routes[route];
+            if (url) {
+                loadContent(url, route);
+            } else {
+                mainContent.innerHTML = '<p>Page not found</p>';
+            }
+        } catch (error) {
+            showNotification('An error occurred. Please try again.', 'error');
         }
     }
 
     async function updateNav() {
-        const response = await fetch('php/api/session_status.php');
-        const status = await response.json();
+        try {
+            const response = await fetch('php/api/session_status.php');
+            const status = await response.json();
 
-        if (status.loggedIn) {
-            let nav = `<li><a href="#dashboard_${status.role}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>`;
-            if (status.role === 'admin') {
-                nav += '<li><a href="#register"><i class="fas fa-user-plus"></i> Register User</a></li>';
-            }
-            nav += `<li><a href="#" id="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>`;
-            navLinks.innerHTML = nav;
+            if (status.loggedIn) {
+                let nav = `<li><a href="#dashboard_${status.role}"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>`;
+                nav += '<li><a href="#ai-chat"><i class="fas fa-robot"></i> AI Chat</a></li>';
+                if (status.role === 'admin') {
+                    nav += '<li><a href="#register"><i class="fas fa-user-plus"></i> Register User</a></li>';
+                    nav += '<li><a href="#activity-logs"><i class="fas fa-history"></i> Activity Logs</a></li>';
+                }
+                if (status.role === 'auditor') {
+                    nav += '<li><a href="#activity-logs"><i class="fas fa-history"></i> Activity Logs</a></li>';
+                }
+                nav += `<li><a href="#" id="logout-link"><i class="fas fa-sign-out-alt"></i> Logout</a></li>`;
+                navLinks.innerHTML = nav;
 
-            const logoutLink = document.getElementById('logout-link');
-            if (logoutLink) {
-                logoutLink.addEventListener('click', async (e) => {
-                    e.preventDefault();
-                    await fetch('php/auth/logout.php');
-                    window.location.hash = '#login';
-                    updateNav();
-                });
+                const logoutLink = document.getElementById('logout-link');
+                if (logoutLink) {
+                    logoutLink.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        await fetch('php/auth/logout.php');
+                        window.location.hash = '#login';
+                        updateNav();
+                    });
+                }
+            } else {
+                navLinks.innerHTML = `
+                    <li><a href="#login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
+                `;
             }
-        } else {
-            navLinks.innerHTML = `
-                <li><a href="#dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</a></li>
-                <li><a href="#login"><i class="fas fa-sign-in-alt"></i> Login</a></li>
-            `;
+        } catch (error) {
+            showNotification('An error occurred. Please try again.', 'error');
         }
     }
 
-    function initializeScripts(route) {
+    async function initializeScripts(route) {
+        if (route.startsWith('#dashboard')) {
+            loadDashboardData();
+        }
+
+        if (route === '#activity-logs') {
+            loadActivityLogs();
+        }
+
+        if (route === '#ai-chat') {
+            handleAIChat();
+        }
+
+        if (route === '#access-denied') {
+            const returnLink = document.getElementById('return-to-dashboard-link');
+            if (returnLink) {
+                const response = await fetch('php/api/session_status.php');
+                const status = await response.json();
+                if (status.loggedIn) {
+                    returnLink.href = `#dashboard_${status.role}`;
+                } else {
+                    returnLink.href = '#login';
+                }
+            }
+        }
+
         if (route === '#login') {
             const loginForm = document.getElementById('login-form');
             if (loginForm) {
                 loginForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const formData = new FormData(loginForm);
-                    const response = await fetch('php/auth/login.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-                    if (response.ok) {
-                        showNotification(result.message);
-                        const sessionResponse = await fetch('php/api/session_status.php');
-                        const status = await sessionResponse.json();
-                        window.location.hash = `#dashboard_${status.role}`;
-                        updateNav();
-                    } else {
-                        showNotification(result.error, 'error');
+                    try {
+                        const formData = new FormData(loginForm);
+                        const response = await fetch('php/auth/login.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
+                        if (response.ok) {
+                            showNotification(result.message);
+                            const sessionResponse = await fetch('php/api/session_status.php');
+                            const status = await sessionResponse.json();
+                            window.location.hash = `#dashboard_${status.role}`;
+                            updateNav();
+                        } else {
+                            showNotification(result.error, 'error');
+                        }
+                    } catch (error) {
+                        showNotification('An error occurred. Please try again.', 'error');
                     }
                 });
             }
@@ -106,17 +154,21 @@ document.addEventListener('DOMContentLoaded', () => {
             if (registerForm) {
                 registerForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const formData = new FormData(registerForm);
-                    const response = await fetch('php/auth/register.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-                    if (response.ok) {
-                        showNotification(result.message);
-                        window.location.hash = '#login';
-                    } else {
-                        showNotification(result.error, 'error');
+                    try {
+                        const formData = new FormData(registerForm);
+                        const response = await fetch('php/auth/register.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
+                        if (response.ok) {
+                            showNotification(result.message);
+                            window.location.hash = '#login';
+                        } else {
+                            showNotification(result.error, 'error');
+                        }
+                    } catch (error) {
+                        showNotification('An error occurred. Please try again.', 'error');
                     }
                 });
             }
@@ -125,13 +177,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (forgotPasswordForm) {
                 forgotPasswordForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const formData = new FormData(forgotPasswordForm);
-                    const response = await fetch('php/auth/forgot_password.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-                    showNotification(result.message);
+                    try {
+                        const formData = new FormData(forgotPasswordForm);
+                        const response = await fetch('php/auth/forgot_password.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
+                        showNotification(result.message);
+                    } catch (error) {
+                        showNotification('An error occurred. Please try again.', 'error');
+                    }
                 });
             }
         } else if (route === '#reset-password') {
@@ -150,20 +206,112 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 resetPasswordForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const formData = new FormData(resetPasswordForm);
-                    const response = await fetch('php/auth/reset_password.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const result = await response.json();
-                    if (response.ok) {
-                        showNotification(result.message);
-                        window.location.hash = '#login';
-                    } else {
-                        showNotification(result.error, 'error');
+                    try {
+                        const formData = new FormData(resetPasswordForm);
+                        const response = await fetch('php/auth/reset_password.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const result = await response.json();
+                        if (response.ok) {
+                            showNotification(result.message);
+                            window.location.hash = '#login';
+                        } else {
+                            showNotification(result.error, 'error');
+                        }
+                    } catch (error) {
+                        showNotification('An error occurred. Please try again.', 'error');
                     }
                 });
             }
+        }
+    }
+
+    async function loadDashboardData() {
+        try {
+            const response = await fetch('php/api/dashboard_data.php');
+            const data = await response.json();
+
+            if (data.user) {
+                const usernameEl = document.getElementById('profile-username');
+                const emailEl = document.getElementById('profile-email');
+                const lastLoginEl = document.getElementById('profile-last-login');
+
+                if (usernameEl) usernameEl.textContent = data.user.username;
+                if (emailEl) emailEl.textContent = data.user.email;
+                if (lastLoginEl) lastLoginEl.textContent = data.user.last_login;
+            }
+            if (data.stats) {
+                const statsContainer = document.querySelector('.quick-stats .stats-container');
+                if (statsContainer) {
+                    statsContainer.querySelector('.fa-users + .stat-number').textContent = data.stats.users;
+                    statsContainer.querySelector('.fa-exclamation-triangle + .stat-number').textContent = data.stats.risks;
+                    statsContainer.querySelector('.fa-file-alt + .stat-number').textContent = data.stats.policies;
+                    statsContainer.querySelector('.fa-search + .stat-number').textContent = data.stats.audits;
+                }
+            }
+        } catch (error) {
+            showNotification('Could not load dashboard data.', 'error');
+        }
+    }
+
+    async function loadActivityLogs() {
+        try {
+            const response = await fetch('php/api/get_activity_logs.php');
+            const logs = await response.json();
+            const logsTableBody = document.getElementById('logs-table-body');
+
+            if (logsTableBody) {
+                logsTableBody.innerHTML = '';
+                logs.forEach(log => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${log.user_id}</td>
+                        <td>${log.action}</td>
+                        <td>${log.ip_address}</td>
+                        <td>${log.timestamp}</td>
+                    `;
+                    logsTableBody.appendChild(row);
+                });
+            }
+        } catch (error) {
+            showNotification('Could not load activity logs.', 'error');
+        }
+    }
+
+    function handleAIChat() {
+        const aiChatForm = document.getElementById('ai-chat-form');
+        const aiResponseArea = document.getElementById('ai-response-area');
+        const aiPromptInput = document.getElementById('ai-prompt');
+
+        if (aiChatForm) {
+            aiChatForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const prompt = aiPromptInput.value;
+                aiPromptInput.value = '';
+
+                // Display user's prompt
+                const userPromptEl = document.createElement('p');
+                userPromptEl.textContent = `You: ${prompt}`;
+                aiResponseArea.appendChild(userPromptEl);
+
+                // Save the prompt to the database
+                try {
+                    const formData = new FormData();
+                    formData.append('prompt', prompt);
+                    await fetch('php/api/save_ai_prompt.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                } catch (error) {
+                    showNotification('Could not save your prompt.', 'error');
+                }
+
+                // Placeholder for AI response
+                const aiResponseEl = document.createElement('p');
+                aiResponseEl.textContent = 'AI: This is a placeholder response.';
+                aiResponseArea.appendChild(aiResponseEl);
+            });
         }
     }
 
