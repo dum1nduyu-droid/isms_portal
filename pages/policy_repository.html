@@ -1,0 +1,103 @@
+<div class="policy-repository-container">
+    <h2>Policy Repository</h2>
+
+    <!-- Upload Form -->
+    <div class="upload-form-container">
+        <h3>Upload New/Update Policy Version</h3>
+        <form id="upload-policy-form" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="title">Title (Must be an existing title to update)</label>
+                <input type="text" id="title" name="title" required>
+            </div>
+            <div class="form-group">
+                <label for="version">Version (e.g., 1.1, 2.0)</label>
+                <input type="text" id="version" name="version" required>
+            </div>
+            <div class="form-group">
+                <label for="owner">Owner</label>
+                <input type="text" id="owner" name="owner" required>
+            </div>
+            <div class="form-group">
+                <label for="iso_clause">ISO Clause</label>
+                <input type="text" id="iso_clause" name="iso_clause">
+            </div>
+            <div class="form-group">
+                <label for="review_frequency">Review Frequency</label>
+                <input type="text" id="review_frequency" name="review_frequency">
+            </div>
+            <div class="form-group">
+                <label for="changelog">Changelog / Reason for Update</label>
+                <textarea id="changelog" name="changelog" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+                <label for="policyFile">File (PDF, DOCX, XLSX)</label>
+                <input type="file" id="policyFile" name="policyFile" required>
+            </div>
+            <button type="submit" class="btn">Upload New Version</button>
+        </form>
+    </div>
+
+    <!-- AI Policy Writer -->
+    <div class="ai-policy-writer-container">
+        <h3>AI Policy Writer</h3>
+        <form id="ai-policy-writer-form">
+            <div class="form-group">
+                <label for="ai-keywords">Keywords (e.g., "Access Control Policy")</label>
+                <input type="text" id="ai-keywords" name="keywords" required>
+            </div>
+            <div class="form-group">
+                <label for="ai-iso-clause">Relevant ISO 27001 Clause</label>
+                <select id="ai-iso-clause" name="iso_clause">
+                    <option value="A.5.1">A.5.1 Policies for information security</option>
+                    <option value="A.6.1">A.6.1 Information security roles and responsibilities</option>
+                    <option value="A.7.1">A.7.1 Asset management</option>
+                    <option value="A.8.1">A.8.1 Access control</option>
+                    <!-- Add other relevant clauses as needed -->
+                </select>
+            </div>
+            <button type="submit" class="btn">Generate Draft</button>
+        </form>
+        <div id="ai-generated-policy" style="display:none;">
+            <h4>Generated Draft</h4>
+            <pre id="ai-policy-text"></pre>
+            <button id="use-ai-draft-btn" class="btn">Use this Draft</button>
+        </div>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="search-filter-container">
+        <h3>Filter Policies</h3>
+        <form id="filter-policies-form">
+            <input type="text" id="search" name="search" placeholder="Search by title...">
+            <input type="text" id="filter-owner" name="owner" placeholder="Filter by owner...">
+            <button type="submit" class="btn">Filter</button>
+        </form>
+    </div>
+
+    <!-- Policy Table -->
+    <table class="policies-table">
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Latest Version</th>
+                <th>Status</th>
+                <th>Owner</th>
+                <th>Uploaded By</th>
+                <th>Uploaded At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="policies-table-body">
+            <!-- Policies will be inserted here dynamically -->
+        </tbody>
+    </table>
+
+    <!-- Modal for Version History -->
+    <div id="version-history-modal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h3 id="version-history-title">Version History</h3>
+            <div id="version-history-content"></div>
+        </div>
+    </div>
+</div>
