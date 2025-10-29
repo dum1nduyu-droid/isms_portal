@@ -8,7 +8,7 @@ function hasAccess($role, $page) {
     ];
 
     // Public pages accessible to all logged-in users
-    $public_pages = ['ai-chat'];
+    $public_pages = ['ai-chat', 'policy-repository'];
 
     if (in_array($page, $public_pages)) {
         return true;
