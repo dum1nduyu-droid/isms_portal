@@ -14,8 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($stmt->execute()) {
         // In a real application, you would send an email with the reset link
-        $reset_link = SITE_URL . '#reset-password?token=' . $token;
-        jsonResponse(['message' => 'Password reset link sent (in a real app, this would be an email). Reset link: ' . $reset_link]);
+        jsonResponse(['message' => 'If an account with that email exists, a password reset link has been sent.']);
     } else {
         jsonResponse(['error' => 'Could not process request'], 400);
     }
